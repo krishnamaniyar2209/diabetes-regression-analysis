@@ -167,12 +167,12 @@ Top 5 of all 45 combinations:
 | Feature 1 | Feature 2 | Intercept | Coef 1 | Coef 2 | MSE | R² |
 |---|---|---|---|---|---|---|
 | **`bmi`** | **`s5`** | **-299.96** | **7.28** | **56.06** | **3205.19** | **0.459** ✅ |
-| `bmi` | `bp` | -203.62 | 8.52 | 1.38 | 3581.69 | |
-| `bmi` | `s4` | -129.72 | 8.60 | 13.54 | 3638.17 | |
-| `bmi` | `s3` | -21.12 | 8.90 | -1.24 | 3669.26 | |
-| `bp` | `s5` | -302.28 | 1.44 | 68.48 | 3695.05 | |
+| `bmi` | `bp` | -203.62 | 8.52 | 1.38 | 3581.69 | 0.396 |
+| `bmi` | `s4` | -129.72 | 8.60 | 13.54 | 3638.17 | 0.386 |
+| `bmi` | `s3` | -21.12 | 8.90 | -1.24 | 3669.26 | 0.381 |
+| `bp` | `s5` | -302.28 | 1.44 | 68.48 | 3695.05 | 0.377 |
 
-`bmi` appears in nine of the ten best pairs, confirming it as the dominant predictor.
+`bmi` appears in **eight of the ten** best-performing pairs, confirming it as the dominant predictor. The two exceptions in the top ten, `bp`+`s5` and `s3`+`s5`, both pair a moderate predictor with `s5`, which is the second-strongest feature on its own.
 
 ### Task 3: All 10 Features
 
@@ -197,14 +197,16 @@ Top 5 of all 45 combinations:
 
 ### Task 4: Learning Curve (Training vs. Validation MSE)
 
-| Training Size | Training MSE | Validation MSE | Ratio |
-|---|---|---|---|
-| 20 | 2,066 | 15,906 | 7.7x |
-| 50 | 2,864 | 3,907 | 1.4x |
-| 100 | 3,151 | 3,423 | 1.1x |
-| 200 | 2,855 | 3,015 | 1.1x |
+| Training Size | Validation Size | Training MSE | Validation MSE | Ratio |
+|---|---|---|---|---|
+| 20 | 422 | 2,066 | 15,906 | 7.7x |
+| 50 | 392 | 2,864 | 3,907 | 1.4x |
+| 100 | 342 | 3,151 | 3,423 | 1.1x |
+| 200 | 242 | 2,855 | 3,015 | 1.1x |
 
-> Tiny training sets overfit dramatically: at n=20, validation MSE is nearly 8 times training MSE. By n=200 the gap has essentially closed. Textbook bias-variance behavior, and a direct illustration of why 442 rows is a small dataset.
+> Tiny training sets overfit dramatically: at n=20, validation MSE is nearly 8 times training MSE. That size fits 10 predictors plus an intercept on 20 observations — barely two rows per parameter — so the model is near-singular and memorizes its training sample. By n=200 the gap has essentially closed. Textbook bias-variance behavior, and a direct illustration of why 442 rows is a small dataset.
+>
+> **Caveat:** `train_test_split(train_size=size)` assigns everything not used for training to validation, so the validation set shrinks as the training set grows (422 → 242 rows). The training sets are nested, but each row's validation MSE is measured on a different sample, so the four figures show a real trend without being strictly like-for-like. A fixed holdout with `learning_curve()` would make them directly comparable.
 
 ---
 
@@ -247,8 +249,9 @@ Linear Regression wins on **every fold except one**, and its fold-to-fold standa
 1. **Tasks 1 to 3 report in-sample fit.** Feature and pair selection is performed using training MSE on the same 442 rows used for fitting. With 45 pair candidates this biases the selection slightly toward whichever pair best fits noise. Nested cross-validation would give an unbiased estimate of the selection procedure itself.
 2. **Multicollinearity is unaddressed.** `s1` and `s2` correlate at 0.897, `s3` and `s4` at -0.738. This destabilizes coefficient estimates in the full model and explains the negative `s1` coefficient despite its positive correlation with the target. Ridge or Lasso would be the natural next step, and the LARS paper this dataset comes from exists precisely to address that problem.
 3. **XGBoost was not tuned.** A single hyperparameter configuration was tested. The conclusion that linear regression wins is sound for these settings but a grid search over `max_depth`, `learning_rate`, and `n_estimators` would make the comparison fairer.
-4. **442 rows is small.** The learning curve shows validation error still declining at n=200, so more data would likely help more than any modeling change.
-5. **No feature engineering.** Interaction terms and polynomial features are untested, and BMI in particular often shows nonlinear effects in clinical literature.
+4. **The learning curve uses a varying validation set.** Validation size falls from 422 to 242 rows as training size grows, so the curve is indicative rather than a controlled measurement. `sklearn.model_selection.learning_curve()` with a fixed CV strategy would fix this.
+5. **442 rows is small.** The learning curve shows validation error still declining at n=200, so more data would likely help more than any modeling change.
+6. **No feature engineering.** Interaction terms and polynomial features are untested, and BMI in particular often shows nonlinear effects in clinical literature.
 
 ---
 
@@ -285,10 +288,10 @@ df = pd.read_csv(
 ## 💡 Key Findings
 
 - **`bmi`** is the single strongest predictor of disease progression (R² 0.34), consistent with medical literature
-- **`bmi` + `s5`** (log triglycerides) is the best of all 45 feature pairs, cutting MSE from 3890 to 3205, and `bmi` appears in nine of the ten best-performing pairs
-- Using **all 10 features** gives the best in-sample linear fit (MSE 2860, R² 0.52), though honest held-out performance lands lower at R² 0.45
+- **`bmi` + `s5`** (log triglycerides) is the best of all 45 feature pairs, cutting MSE from 3890 to 3205, and `bmi` appears in eight of the ten best-performing pairs
+- Using **all 10 features** gives the best in-sample linear fit (MSE 2860, R² 0.52), though honest cross-validated performance lands lower at R² 0.478
 - **Learning curves** confirm bias-variance behavior: at n=20 validation error is 8 times training error, closing to near parity by n=200
-- **Linear Regression outperformed XGBoost** on the test set (R² 0.453 vs. 0.441) and on 5-fold CV (R² 0.478 vs. 0.423), winning four of five folds with 31% lower variance. On a small, largely linear dataset, gradient boosting overfits. The more complex model is not automatically the better one
+- **Linear Regression outperformed XGBoost** on 5-fold CV (R² 0.478 vs. 0.423), winning four of five folds with 31% lower variance. On a small, largely linear dataset, gradient boosting overfits. The more complex model is not automatically the better one
 - **Residual analysis** shows roughly normal errors, supporting the linear-model assumptions
 
 ---
@@ -311,7 +314,7 @@ df = pd.read_csv(
 **Krishna Maniyar**, Data Analyst
 - 🎓 Pace University, Seidenberg School of CSIS, MS in Data Science
 - 📘 CS675: Introduction to Data Science
-- 📧 krishnamaniyarkm22@gmail.com
+- 📧 maniyarkrishnakm22@gmail.com
 - 🔗 [GitHub](https://github.com/krishnamaniyar2209) · [LinkedIn](https://www.linkedin.com/in/krishnamaniyar/) · [Portfolio](https://krishnamaniyar2209.github.io/)
 
 ---
