@@ -14,16 +14,18 @@
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
+- [Highlights](#-highlights)
+- [Demo](#-demo)
 - [Dataset](#-dataset)
 - [Project Structure](#-project-structure)
 - [Methodology](#-methodology)
 - [Models & Results](#-models--results)
 - [Extra Credit: XGBoost](#-extra-credit-xgboost)
 - [Limitations & Next Steps](#-limitations--next-steps)
-- [Installation](#-installation)
+- [Installation](#️-installation)
 - [Usage](#-usage)
 - [Key Findings](#-key-findings)
-- [Technologies Used](#-technologies-used)
+- [Technologies Used](#️-technologies-used)
 - [Author](#-author)
 
 ---
@@ -39,6 +41,25 @@ The notebook covers:
 - ✅ **Full-feature regression**, all 10 features together
 - ✅ **Learning-curve analysis**, training vs. validation MSE across dataset sizes
 - ✅ **XGBoost comparison**, gradient boosting vs. linear regression with test split and 5-fold CV (extra credit)
+
+---
+
+## ✨ Highlights
+
+- Showed that a **more complex model isn't automatically better**: on 5-fold cross-validation, plain Linear Regression beat XGBoost on 4 of 5 folds (R² 0.478 vs. 0.423) with 31% lower fold-to-fold variance — and explained why, rather than just reporting the win: 442 rows and a largely linear signal give gradient boosting nothing to exploit and room to overfit.
+- Caught a subtle evaluation flaw in its own methodology: the test-set split and cross-validation fold 1 turned out to be identical partitions (same `random_state=42`), which would have made the two "independent" evaluations non-independent. Flagged it explicitly rather than letting the CV mean look more validated than it was.
+- Systematically searched every one of the **45 possible feature pairs** (not just the two best features individually) to find the true best two-feature model, and explained *why* the winning pair worked (`bmi` for magnitude, `s5` for the variance `bmi` alone can't explain).
+- Distinguished in-sample fit from genuine predictive accuracy throughout — explicitly separating "this feature-selection MSE describes fit quality" from "this cross-validated number is what to trust for predictive performance," a distinction a lot of student projects blur.
+
+---
+
+## 🎥 Demo
+
+*The best-pair scatter plot (predicted vs. actual for `bmi` + `s5`) and the learning-curve chart are the most immediately informative visuals here — either would work well as a preview image for the repo.*
+
+```
+![Best model fit and learning curve](docs/results_preview.png)
+```
 
 ---
 
